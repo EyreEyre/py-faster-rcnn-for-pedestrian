@@ -20,7 +20,6 @@ import uuid
 from caltech_utils import caltech_eval, parse_caltech_annotations
 from fast_rcnn.config import cfg
 from caltech_vbb import get_image_identifiers, get_caltech_annoations, get_default_filter
-from IPython.core.debugger import Tracer
 
 class caltech(imdb):
     def __init__(self, image_set, year, devkit_path=None):
