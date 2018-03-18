@@ -36,6 +36,11 @@ class ProposalTargetLayer(caffe.Layer):
         # bbox_outside_weights
         top[4].reshape(1, self._num_classes * 4)
 
+        if DEBUG:
+            self._count = 0
+            self._fg_num = 0
+            self._bg_num = 0
+
     def forward(self, bottom, top):
         # Proposal ROIs (0, x1, y1, x2, y2) coming from RPN
         # (i.e., rpn.proposal_layer.ProposalLayer), or any other source
@@ -57,7 +62,7 @@ class ProposalTargetLayer(caffe.Layer):
 
         num_images = 1
         rois_per_image = cfg.TRAIN.BATCH_SIZE / num_images
-        fg_rois_per_image = np.round(cfg.TRAIN.FG_FRACTION * rois_per_image)
+        fg_rois_per_image = int(np.round(cfg.TRAIN.FG_FRACTION * rois_per_image))
 
         # Sample rois with classification labels and bounding box regression
         # targets
@@ -115,13 +120,17 @@ def _get_bbox_regression_labels(bbox_target_data, num_classes):
         bbox_target (ndarray): N x 4K blob of regression targets
         bbox_inside_weights (ndarray): N x 4K blob of loss weights
     """
+    # #for ipdb debug
+    # if DEBUG_IPDB
+    # from ipdb import set_trace
+    # set_trace()
 
     clss = bbox_target_data[:, 0]
     bbox_targets = np.zeros((clss.size, 4 * num_classes), dtype=np.float32)
     bbox_inside_weights = np.zeros(bbox_targets.shape, dtype=np.float32)
     inds = np.where(clss > 0)[0]
     for ind in inds:
-        cls = clss[ind]
+        cls = int(clss[ind])
         start = 4 * cls
         end = start + 4
         bbox_targets[ind, start:end] = bbox_target_data[ind, 1:]
@@ -148,13 +157,40 @@ def _sample_rois(all_rois, gt_boxes, fg_rois_per_image, rois_per_image, num_clas
     """Generate a random sample of RoIs comprising foreground and background
     examples.
     """
+    if DEBUG:
+            import ipdb
+            ipdb.set_trace()
+
+    if cfg.TRAIN.IGNORE_BOXES:
+        # get ig_boxes and gt_boxes
+        arg_ig_boxes = np.where((gt_boxes[:,4]!=1) & (gt_boxes[:,4]!=0))[0]
+        ig_boxes = gt_boxes[arg_ig_boxes,:]
+
+        arg_gt_boxes = np.where(gt_boxes[:,4]==1)[0]
+        gt_boxes = gt_boxes[arg_gt_boxes,:]
+
+        # if there no need ignore bbox
+        if len(arg_ig_boxes)==0:
+            max_ig_overlaps = np.zeros((len(all_rois), ),dtype=np.float)
+        else:
+            ig_overlaps = bbox_overlaps(
+                np.ascontiguousarray(all_rois[:, 1:5], dtype=np.float),
+                np.ascontiguousarray(ig_boxes[:, :4], dtype=np.float))
+            argmax_ig_overlaps = ig_overlaps.argmax(axis=1) # the index of ig match with ex
+            max_ig_overlaps = ig_overlaps.max(axis=1) # iou
+    
+    if len(gt_boxes)==0:
+        max_overlaps = np.zeros((len(all_rois), ),dtype=np.float)
+        labels = np.empty((len(all_rois), ), dtype=np.float32)
+        labels.fill(-1)
+    else:
     # overlaps: (rois x gt_boxes)
-    overlaps = bbox_overlaps(
-        np.ascontiguousarray(all_rois[:, 1:5], dtype=np.float),
-        np.ascontiguousarray(gt_boxes[:, :4], dtype=np.float))
-    gt_assignment = overlaps.argmax(axis=1)
-    max_overlaps = overlaps.max(axis=1)
-    labels = gt_boxes[gt_assignment, 4]
+        overlaps = bbox_overlaps(
+            np.ascontiguousarray(all_rois[:, 1:5], dtype=np.float),
+            np.ascontiguousarray(gt_boxes[:, :4], dtype=np.float))
+        gt_assignment = overlaps.argmax(axis=1)
+        max_overlaps = overlaps.max(axis=1)
+        labels = gt_boxes[gt_assignment, 4]
 
     # Select foreground RoIs as those with >= FG_THRESH overlap
     fg_inds = np.where(max_overlaps >= cfg.TRAIN.FG_THRESH)[0]
@@ -165,9 +201,16 @@ def _sample_rois(all_rois, gt_boxes, fg_rois_per_image, rois_per_image, num_clas
     if fg_inds.size > 0:
         fg_inds = npr.choice(fg_inds, size=fg_rois_per_this_image, replace=False)
 
-    # Select background RoIs as those within [BG_THRESH_LO, BG_THRESH_HI)
-    bg_inds = np.where((max_overlaps < cfg.TRAIN.BG_THRESH_HI) &
-                       (max_overlaps >= cfg.TRAIN.BG_THRESH_LO))[0]
+    # Sample backgournd regions and exclude ignore area
+    if cfg.TRAIN.IGNORE_BOXES:
+        bg_inds = np.where((max_overlaps < cfg.TRAIN.BG_THRESH_HI) &
+                           (max_overlaps >= cfg.TRAIN.BG_THRESH_LO) &
+                           (max_ig_overlaps < cfg.TRAIN.RPN_IGNORE_OVERLAP))[0]
+    else:
+        # Select background RoIs as those within [BG_THRESH_LO, BG_THRESH_HI)
+        bg_inds = np.where((max_overlaps < cfg.TRAIN.BG_THRESH_HI) &
+                        (max_overlaps >= cfg.TRAIN.BG_THRESH_LO))[0]
+    
     # Compute number of background RoIs to take from this image (guarding
     # against there being fewer than desired)
     bg_rois_per_this_image = rois_per_image - fg_rois_per_this_image
@@ -184,8 +227,12 @@ def _sample_rois(all_rois, gt_boxes, fg_rois_per_image, rois_per_image, num_clas
     labels[fg_rois_per_this_image:] = 0
     rois = all_rois[keep_inds]
 
-    bbox_target_data = _compute_targets(
-        rois[:, 1:5], gt_boxes[gt_assignment[keep_inds], :4], labels)
+    if len(gt_boxes)==0:
+        bbox_target_data = _compute_targets(
+            rois[:, 1:5], rois[:, 1:5], labels)
+    else:
+        bbox_target_data = _compute_targets(
+            rois[:, 1:5], gt_boxes[gt_assignment[keep_inds], :4], labels)
 
     bbox_targets, bbox_inside_weights = \
         _get_bbox_regression_labels(bbox_target_data, num_classes)

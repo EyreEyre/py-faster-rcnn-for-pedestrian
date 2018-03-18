@@ -122,8 +122,12 @@ __C.TRAIN.RPN_BBOX_INSIDE_WEIGHTS = (1.0, 1.0, 1.0, 1.0)
 # and give negatives a weight of (1 - p)
 # Set to -1.0 to use uniform example weighting
 __C.TRAIN.RPN_POSITIVE_WEIGHT = -1.0
-
-
+# For pedestrian detection use ignore
+__C.TRAIN.IGNORE_BOXES = False
+# Ignore threshold used on RPN proposals
+__C.TRAIN.RPN_IGNORE_OVERLAP = 0.5
+# Number of class as background and foreground
+__C.TRAIN.NUM_CLASSES = 2
 #
 # Testing options
 #

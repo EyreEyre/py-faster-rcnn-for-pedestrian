@@ -16,6 +16,9 @@ import os
 
 from caffe.proto import caffe_pb2
 import google.protobuf as pb2
+import google.protobuf.text_format
+
+DEBUG=False
 
 class SolverWrapper(object):
     """A simple wrapper around Caffe's solver.
@@ -56,6 +59,10 @@ class SolverWrapper(object):
         """Take a snapshot of the network after unnormalizing the learned
         bounding-box regression weights. This enables easy use at test-time.
         """
+        if DEBUG:
+            import ipdb
+            ipdb.set_trace()
+
         net = self.solver.net
 
         scale_bbox_params = (cfg.TRAIN.BBOX_REG and
@@ -141,6 +148,10 @@ def filter_roidb(roidb):
         valid = len(fg_inds) > 0 or len(bg_inds) > 0
         return valid
 
+    if DEBUG:
+        import ipdb
+        ipdb.set_trace()
+
     num = len(roidb)
     filtered_roidb = [entry for entry in roidb if is_valid(entry)]
     num_after = len(filtered_roidb)
@@ -151,7 +162,9 @@ def filter_roidb(roidb):
 def train_net(solver_prototxt, roidb, output_dir,
               pretrained_model=None, max_iters=40000):
     """Train a Fast R-CNN network."""
-
+    if DEBUG:
+        import ipdb
+        ipdb.set_trace()
     roidb = filter_roidb(roidb)
     sw = SolverWrapper(solver_prototxt, roidb, output_dir,
                        pretrained_model=pretrained_model)

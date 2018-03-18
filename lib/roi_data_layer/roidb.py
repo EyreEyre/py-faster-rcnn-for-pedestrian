@@ -13,6 +13,8 @@ from fast_rcnn.bbox_transform import bbox_transform
 from utils.cython_bbox import bbox_overlaps
 import PIL
 
+DEBUG = False
+
 def prepare_roidb(imdb):
     """Enrich the imdb's roidb by adding some derived quantities that
     are useful for training. This function precomputes the maximum
@@ -20,6 +22,9 @@ def prepare_roidb(imdb):
     each ground-truth box. The class with maximum overlap is also
     recorded.
     """
+    if DEBUG:
+        import ipdb
+        ipdb.set_trace()
     sizes = [PIL.Image.open(imdb.image_path_at(i)).size
              for i in xrange(imdb.num_images)]
     roidb = imdb.roidb
@@ -50,7 +55,8 @@ def add_bbox_regression_targets(roidb):
 
     num_images = len(roidb)
     # Infer number of classes from the number of columns in gt_overlaps
-    num_classes = roidb[0]['gt_overlaps'].shape[1]
+    # num_classes = roidb[0]['gt_overlaps'].shape[1]
+    num_classes = cfg.TRAIN.NUM_CLASSES
     for im_i in xrange(num_images):
         rois = roidb[im_i]['boxes']
         max_overlaps = roidb[im_i]['max_overlaps']

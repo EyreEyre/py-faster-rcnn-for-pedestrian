@@ -14,17 +14,17 @@ export PYTHONUNBUFFERED="True"
 
 GPU_ID=$1
 NET=VGG16       #fixed for caltech dataset
-NET_lc=${NET,,}
+# NET_lc=${NET,,}
 
-array=( $@ )
+array=($@)
 len=${#array[@]}
 EXTRA_ARGS=${array[@]:3:$len}
 EXTRA_ARGS_SLUG=${EXTRA_ARGS// /_}
 
-TRAIN_IMDB="caltech_train_1x"
+TRAIN_IMDB="caltech_train_10x"
 TEST_IMDB="caltech_test_1x"
 PT_DIR="caltech"
-ITERS=1000
+ITERS=80000
 
 LOG="experiments/logs/faster_rcnn_end2end_${NET}_${EXTRA_ARGS_SLUG}.txt.`date +'%Y-%m-%d_%H-%M-%S'`"
 exec &> >(tee -a "$LOG")

@@ -1,3 +1,4 @@
+# -*- coding: UTF-8 -*-
 # --------------------------------------------------------
 # Fast R-CNN
 # Copyright (c) 2015 Microsoft
@@ -18,6 +19,8 @@ import subprocess
 import uuid
 from caltech_utils import caltech_eval, parse_caltech_annotations
 from fast_rcnn.config import cfg
+from caltech_vbb import get_image_identifiers, get_caltech_annoations, get_default_filter
+from IPython.core.debugger import Tracer
 
 class caltech(imdb):
     def __init__(self, image_set, year, devkit_path=None):
@@ -33,7 +36,7 @@ class caltech(imdb):
         self._data_path = os.path.join(self._devkit_path, 'data')
         #govind: Ignoring the people class. So, num_classes = 2
         self._classes = ('__background__', # always index 0
-                         'person') 
+                         'person','people','person?','person-fa') 
         
         #self._classes = ('__background__', # always index 0
         #                 'aeroplane', 'bicycle', 'bird', 'boat',
@@ -53,6 +56,8 @@ class caltech(imdb):
         self._roidb_handler = self.selective_search_roidb
         self._salt = str(uuid.uuid4())
         self._comp_id = 'comp4'
+        
+        self._num_classes = 2
 
         # PASCAL specific config options
         self.config = {'cleanup'     : True,
@@ -142,6 +147,31 @@ class caltech(imdb):
                 cPickle.dump(gt_roidb, fid, cPickle.HIGHEST_PROTOCOL)
             print 'wrote gt roidb to {}'.format(cache_file)
             return gt_roidb
+
+    def gt_xzw_roidb(self,param={}):
+
+        imagesetfile = os.path.join(self._data_path, 'ImageSets', self._image_set + '.txt')
+        
+        image_identifiers = get_image_identifiers(imagesetfile)
+
+        if len(param) == 0:
+            param=get_default_filter()
+            param['lbls']=['person']
+            param['ilbls']=['people']
+            param['squarify']=[3,0.41]
+            param['hRng']=[50,float('inf')]
+            param['vRng']=[1,1]
+
+        caltech_parsed_data = get_caltech_annoations(image_identifiers, os.path.join(self._data_path, 'annotations'), param)
+
+        gt_roidb = [self._load_caltech_annotation_xzw(caltech_parsed_data, i)
+                        for i in self.image_index]
+        # with open(cache_file, 'wb') as fid:
+        #     cPickle.dump(gt_roidb, fid, cPickle.HIGHEST_PROTOCOL)
+        # print 'wrote gt roidb to {}'.format(cache_file)
+
+        return gt_roidb
+
 
     #govind: This alt-opt training log doesn't print the 
     # 'wrote ss roidb to' line. Hence this function is never getting called.
@@ -274,7 +304,52 @@ class caltech(imdb):
                 'gt_overlaps' : overlaps,
                 'flipped' : False,
                 'seg_areas' : seg_areas}
+        
+    def _load_caltech_annotation_xzw(self, caltech_parsed_data, idx_image):
+        width = 640
+        height = 480
+        objs = caltech_parsed_data[idx_image]
+        num_objs = len(objs)
+        
+        id = np.zeros((num_objs), dtype=np.int32)
+        boxes = np.zeros((num_objs, 4), dtype=np.uint16)
+        boxves= np.zeros((num_objs, 4), dtype=np.uint16)
+        gt_classes = np.zeros((num_objs), dtype=np.int32)
+        occl = np.zeros((num_objs), dtype=np.int32)
+        ignore = np.zeros((num_objs), dtype=bool)
+        overlaps = np.zeros((num_objs, self.num_classes), dtype=np.float32)
+        # "Seg" area for pascal is just the box area
+        seg_areas = np.zeros((num_objs), dtype=np.float32)
 
+        for ix, obj in enumerate(objs):
+            x1 = np.max((0,obj['pos'][0]))
+            y1 = np.max((0,obj['pos'][1]))
+            x2 = np.min((width - 1, x1 + np.max((0, obj['pos'][2] - 1))))
+            y2 = np.min((height - 1, y1 + np.max((0, obj['pos'][3] - 1))))
+            boxes[ix,:]=[x1,y1,x2,y2]
+            xv1 = np.max((0,obj['posv'][0]))
+            yv1 = np.max((0,obj['posv'][1]))
+            xv2 = np.min((width - 1, xv1 + np.max((0, obj['posv'][2] - 1))))
+            yv2 = np.min((height - 1, yv1 + np.max((0, obj['posv'][3] - 1))))
+            boxves[ix,:]=[xv1,yv1,xv2,yv2]
+            icls = self._class_to_ind[obj['lbl']]
+            ignore[ix] = obj['ignore']
+            if ignore[ix]:
+                icls = 2 # fix as class 2 is ignore gt
+            gt_classes[ix] = icls
+            occl[ix] = obj['occl']
+            overlaps[ix, icls] = 1.0
+            seg_areas[ix] = (x2-x1+1)*(y2-y1+1)
+        
+        overlaps = scipy.sparse.csr_matrix(overlaps)
+
+        return {'boxes': boxes,
+                'gt_classes': gt_classes,
+                'gt_overlaps': overlaps,
+                'ignore': ignore,
+                'flipped': False,
+                'seg_areas': seg_areas}
+            
     #govind: What is _comp_id
     def _get_comp_id(self):
         comp_id = (self._comp_id + '_' + self._salt if self.config['use_salt']
@@ -316,6 +391,13 @@ class caltech(imdb):
                                 format(index, dets[k, -1],
                                        dets[k, 0] + 1, dets[k, 1] + 1,
                                        dets[k, 2] + 1, dets[k, 3] + 1))
+    
+    def _write_caltech_results_file_xzw(self, all_boxes, cls=['person']):
+        '''
+        参考之前写的result_eval函数改写该函数
+        '''
+        print 'Writing {} caltech results file'.format(cls)
+        pass
 
     #govind: This function is responsible for evaluating the 
     # performance of network by comparing the 
@@ -400,11 +482,11 @@ class caltech(imdb):
             self.config['use_salt'] = True
             self.config['cleanup'] = True
 
-if __name__ == '__main__':
-    #govind: know when this part is getting executed
-    assert 0
+# if __name__ == '__main__':
+#     #govind: know when this part is getting executed
+#     assert 0
 
-    from datasets.pascal_voc import pascal_voc
-    d = pascal_voc('trainval', '2007')
-    res = d.roidb
-    from IPython import embed; embed()
+#     from datasets.pascal_voc import pascal_voc
+#     d = pascal_voc('trainval', '2007')
+#     res = d.roidb
+#     from IPython import embed; embed()

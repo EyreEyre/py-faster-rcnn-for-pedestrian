@@ -127,17 +127,48 @@ class AnchorTargetLayer(caffe.Layer):
         labels = np.empty((len(inds_inside), ), dtype=np.float32)
         labels.fill(-1)
 
-        # overlaps between the anchors and the gt boxes
-        # overlaps (ex, gt)
-        overlaps = bbox_overlaps(
-            np.ascontiguousarray(anchors, dtype=np.float),
-            np.ascontiguousarray(gt_boxes, dtype=np.float))
-        argmax_overlaps = overlaps.argmax(axis=1)
-        max_overlaps = overlaps[np.arange(len(inds_inside)), argmax_overlaps]
-        gt_argmax_overlaps = overlaps.argmax(axis=0)
-        gt_max_overlaps = overlaps[gt_argmax_overlaps,
-                                   np.arange(overlaps.shape[1])]
-        gt_argmax_overlaps = np.where(overlaps == gt_max_overlaps)[0]
+        if DEBUG:
+            import ipdb
+            ipdb.set_trace()
+
+        if cfg.TRAIN.IGNORE_BOXES:
+            # get ig_boxes and gt_boxes
+            arg_ig_boxes = np.where((gt_boxes[:,4]!=1) & (gt_boxes[:,4]!=0))[0]
+            ig_boxes = gt_boxes[arg_ig_boxes,:]
+            arg_gt_boxes = np.where(gt_boxes[:,4]==1)[0]
+            gt_boxes = gt_boxes[arg_gt_boxes,:]
+            
+            # if there no ignore bbox
+            if len(arg_ig_boxes)==0:
+                max_ig_overlaps = np.zeros((len(inds_inside), ),dtype=np.float)
+            else:
+                ig_overlaps = bbox_overlaps(
+                    np.ascontiguousarray(anchors, dtype=np.float),
+                    np.ascontiguousarray(ig_boxes, dtype=np.float))
+                
+                argmax_ig_overlaps = ig_overlaps.argmax(axis=1) # the index of gt match with ex
+                max_ig_overlaps = ig_overlaps[np.arange(len(inds_inside)), argmax_ig_overlaps] # iou
+                # ig_argmax_overlaps = ig_overlaps.argmax(axis=0) # the index of ex match with gt
+                # ig_max_overlaps = ig_overlaps[ig_argmax_overlaps, # iou
+                #                        np.arange(ig_overlaps.shape[1])]
+                # ig_argmax_overlaps = np.where(ig_overlaps == ig_max_overlaps)[0] # must equal
+        
+        if len(gt_boxes)==0:
+            max_overlaps = np.zeros((len(inds_inside), ),dtype=np.float)
+            gt_argmax_overlaps = []
+            argmax_overlaps = []
+        else:
+            # overlaps between the anchors and the gt boxes
+            # overlaps (ex, gt)
+            overlaps = bbox_overlaps(
+                np.ascontiguousarray(anchors, dtype=np.float),
+                np.ascontiguousarray(gt_boxes, dtype=np.float))
+            argmax_overlaps = overlaps.argmax(axis=1)
+            max_overlaps = overlaps[np.arange(len(inds_inside)), argmax_overlaps]
+            gt_argmax_overlaps = overlaps.argmax(axis=0)
+            gt_max_overlaps = overlaps[gt_argmax_overlaps,
+                                    np.arange(overlaps.shape[1])]
+            gt_argmax_overlaps = np.where(overlaps == gt_max_overlaps)[0]
 
         if not cfg.TRAIN.RPN_CLOBBER_POSITIVES:
             # assign bg labels first so that positive labels can clobber them
@@ -152,6 +183,10 @@ class AnchorTargetLayer(caffe.Layer):
         if cfg.TRAIN.RPN_CLOBBER_POSITIVES:
             # assign bg labels last so that negative labels can clobber positives
             labels[max_overlaps < cfg.TRAIN.RPN_NEGATIVE_OVERLAP] = 0
+
+        if cfg.TRAIN.IGNORE_BOXES:
+            # set the bg ex ignore, which above threshold iou with ignore gt
+            labels[np.where(labels==0) and (max_ig_overlaps >= cfg.TRAIN.RPN_IGNORE_OVERLAP)]=-1
 
         # subsample positive labels if we have too many
         num_fg = int(cfg.TRAIN.RPN_FG_FRACTION * cfg.TRAIN.RPN_BATCHSIZE)
@@ -172,7 +207,9 @@ class AnchorTargetLayer(caffe.Layer):
                 #len(bg_inds), len(disable_inds), np.sum(labels == 0))
 
         bbox_targets = np.zeros((len(inds_inside), 4), dtype=np.float32)
-        bbox_targets = _compute_targets(anchors, gt_boxes[argmax_overlaps, :])
+
+        if len(argmax_overlaps)>0:
+            bbox_targets = _compute_targets(anchors, gt_boxes[argmax_overlaps, :])
 
         bbox_inside_weights = np.zeros((len(inds_inside), 4), dtype=np.float32)
         bbox_inside_weights[labels == 1, :] = np.array(cfg.TRAIN.RPN_BBOX_INSIDE_WEIGHTS)
