@@ -97,8 +97,6 @@ def get_caltech_annoations(image_identifiers, ann_dir, param={}):
         #vis_annotations(image_identifier, anno[image_identifier])
     return anno
 
-
-
 def get_image_identifiers(imageSets_file):
     '''get image identifiers from ImageSets dir's file for train or test. like {'set00/V000/1','set/V000/31'...}'''
     with open(imageSets_file, 'r') as f:

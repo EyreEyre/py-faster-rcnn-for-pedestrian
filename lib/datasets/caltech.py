@@ -45,7 +45,7 @@ class caltech(imdb):
         #                 'sheep', 'sofa', 'train', 'tvmonitor')        
         
         #govind: num_classes is set based on the number of classes in _classes tuple
-        self._class_to_ind = dict(zip(self.classes, xrange(self.num_classes)))
+        self._class_to_ind = dict(zip(self.classes, xrange(len(self._classes))))
         self._image_ext = '.jpg'
         #govind: self._image_index is a list of all image names for current _image_set
         self._image_index = self._load_image_set_index()
@@ -55,8 +55,6 @@ class caltech(imdb):
         self._roidb_handler = self.selective_search_roidb
         self._salt = str(uuid.uuid4())
         self._comp_id = 'comp4'
-        
-        self._num_classes = 2
 
         # PASCAL specific config options
         self.config = {'cleanup'     : True,
@@ -316,13 +314,13 @@ class caltech(imdb):
         gt_classes = np.zeros((num_objs), dtype=np.int32)
         occl = np.zeros((num_objs), dtype=np.int32)
         ignore = np.zeros((num_objs), dtype=bool)
-        overlaps = np.zeros((num_objs, self.num_classes), dtype=np.float32)
+        overlaps = np.zeros((num_objs, len(self._classes)), dtype=np.float32)
         # "Seg" area for pascal is just the box area
         seg_areas = np.zeros((num_objs), dtype=np.float32)
 
         for ix, obj in enumerate(objs):
-            x1 = np.max((0,obj['pos'][0]))
-            y1 = np.max((0,obj['pos'][1]))
+            x1 = np.max((0,np.min((width - 1,obj['pos'][0]))))
+            y1 = np.max((0,np.min((height - 1,obj['pos'][1]))))
             x2 = np.min((width - 1, x1 + np.max((0, obj['pos'][2] - 1))))
             y2 = np.min((height - 1, y1 + np.max((0, obj['pos'][3] - 1))))
             boxes[ix,:]=[x1,y1,x2,y2]
@@ -374,7 +372,7 @@ class caltech(imdb):
     # 000045 0.056 82.9 71.5 500.0 371.6
     # 000070 0.052 162.7 40.5 323.1 373.2
     def _write_caltech_results_file(self, all_boxes):
-        for cls_ind, cls in enumerate(self.classes):
+        for cls_ind, cls in enumerate(self.classes[:2]):
             if cls == '__background__':
                 continue
             print 'Writing {} caltech results file'.format(cls)
@@ -480,6 +478,10 @@ class caltech(imdb):
         else:
             self.config['use_salt'] = True
             self.config['cleanup'] = True
+    
+    @property
+    def num_classes(self):
+        return 2
 
 # if __name__ == '__main__':
 #     #govind: know when this part is getting executed

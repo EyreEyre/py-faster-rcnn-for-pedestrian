@@ -68,7 +68,7 @@ def parse_caltech_annotations(image_identifiers, ann_dir):
                         obj_datum['difficult'] = 0
                         obj_datum['bbox'] = pos
                         objs.append(obj_datum)
-                data[set_name][video_name][frame_id] = objs
+                data[set_name][video_name][frame_id+1] = objs
                 
     # Out of all available annotations, just use those that are
     # required (as listed in image_identifiers)
