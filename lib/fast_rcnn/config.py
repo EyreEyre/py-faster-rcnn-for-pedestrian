@@ -241,6 +241,8 @@ def _merge_a_into_b(a, b):
         # the types must match, too
         old_type = type(b[k])
         if old_type is not type(v):
+            import ipdb
+            ipdb.set_trace()
             if isinstance(b[k], np.ndarray):
                 v = np.array(v, dtype=b[k].dtype)
             else:

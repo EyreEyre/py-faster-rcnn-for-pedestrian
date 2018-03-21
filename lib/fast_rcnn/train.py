@@ -150,7 +150,8 @@ def filter_roidb(roidb):
         else:
             # find boxes with sufficient overlap
             fg_inds = np.where(overlaps >= cfg.TRAIN.FG_THRESH)[0]
-            # Select background RoIs as those within [BG_THRESH_LO, BG_THRESH_HI)
+        
+        # Select background RoIs as those within [BG_THRESH_LO, BG_THRESH_HI)
         bg_inds = np.where((overlaps < cfg.TRAIN.BG_THRESH_HI) &
                            (overlaps >= cfg.TRAIN.BG_THRESH_LO))[0]
         # image is only valid if such boxes exist

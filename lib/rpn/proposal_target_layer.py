@@ -13,7 +13,8 @@ from fast_rcnn.config import cfg
 from fast_rcnn.bbox_transform import bbox_transform
 from utils.cython_bbox import bbox_overlaps
 
-DEBUG = False
+DEBUG = True
+IPDB = False
 
 class ProposalTargetLayer(caffe.Layer):
     """
@@ -121,9 +122,9 @@ def _get_bbox_regression_labels(bbox_target_data, num_classes):
         bbox_inside_weights (ndarray): N x 4K blob of loss weights
     """
     # #for ipdb debug
-    # if DEBUG_IPDB
-    # from ipdb import set_trace
-    # set_trace()
+    if IPDB:
+        from ipdb import set_trace
+        set_trace()
 
     clss = bbox_target_data[:, 0]
     bbox_targets = np.zeros((clss.size, 4 * num_classes), dtype=np.float32)
@@ -157,7 +158,7 @@ def _sample_rois(all_rois, gt_boxes, fg_rois_per_image, rois_per_image, num_clas
     """Generate a random sample of RoIs comprising foreground and background
     examples.
     """
-    if DEBUG:
+    if IPDB:
             import ipdb
             ipdb.set_trace()
 

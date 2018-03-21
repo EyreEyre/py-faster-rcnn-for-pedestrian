@@ -21,7 +21,7 @@ len=${#array[@]}
 EXTRA_ARGS=${array[@]:3:$len}
 EXTRA_ARGS_SLUG=${EXTRA_ARGS// /_}
 
-TRAIN_IMDB="caltech_train_10x"
+TRAIN_IMDB="caltech_train_1x"
 TEST_IMDB="caltech_test_1x"
 PT_DIR="caltech"
 ITERS=80000
