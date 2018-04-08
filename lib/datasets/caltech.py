@@ -21,6 +21,8 @@ from caltech_utils import caltech_eval, parse_caltech_annotations
 from fast_rcnn.config import cfg
 from caltech_vbb import get_image_identifiers, get_caltech_annoations, get_default_filter
 
+IPDB = True
+
 class caltech(imdb):
     def __init__(self, image_set, year, devkit_path=None):
         #govind: values of image_set is "train", "test" or "val"
@@ -151,13 +153,13 @@ class caltech(imdb):
         
         image_identifiers = get_image_identifiers(imagesetfile)
 
-        if len(param) == 0:
-            param=get_default_filter()
-            param['lbls']=['person']
-            param['ilbls']=['people']
-            param['squarify']=[3,0.41]
-            param['hRng']=[50,float('inf')]
-            param['vRng']=[1,1]
+        # if len(param) == 0:
+        #     param=get_default_filter()
+        #     param['lbls']=['person']
+        #     param['ilbls']=['people']
+        #     param['squarify']=[3,0.41]
+        #     param['hRng']=[50,float('inf')]
+        #     param['vRng']=[1,1]
 
         caltech_parsed_data = get_caltech_annoations(image_identifiers, os.path.join(self._data_path, 'annotations'), param)
 
@@ -357,7 +359,7 @@ class caltech(imdb):
     #The file is stored as VOCdevkit/results/VOC2007/Main/<comp_id>_det_test_<class_name>.txt
     def _get_caltech_results_file_template(self):
         results_dir = path = os.path.join(
-            self._devkit_path, 'results');
+            self._devkit_path, 'results')
         if not os.path.isdir(results_dir):
             os.mkdir(results_dir)
         # caltech/results/<_get_comp_id>_det_test_aeroplane.txt
@@ -466,7 +468,10 @@ class caltech(imdb):
         if self.config['cleanup']:
             #govind: Remove the temp result files 
             for cls in self._classes:
-                if cls == '__background__':
+                if IPDB:
+                    import ipdb
+                    ipdb.set_trace()
+                if ((cls == '__background__') or (cls != 'person')):
                     continue
                 filename = self._get_caltech_results_file_template().format(cls)
                 os.remove(filename)

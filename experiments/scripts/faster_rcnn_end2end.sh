@@ -21,7 +21,7 @@ len=${#array[@]}
 EXTRA_ARGS=${array[@]:3:$len}
 EXTRA_ARGS_SLUG=${EXTRA_ARGS// /_}
 
-TRAIN_IMDB="caltech_train_1x"
+TRAIN_IMDB="caltech_train_10x"
 TEST_IMDB="caltech_test_1x"
 PT_DIR="caltech"
 ITERS=80000
@@ -35,7 +35,7 @@ time ./tools/train_net.py --gpu ${GPU_ID} \
   --weights data/imagenet_models/${NET}.v2.caffemodel \
   --imdb ${TRAIN_IMDB} \
   --iters ${ITERS} \
-  --cfg experiments/cfgs/faster_rcnn_end2end.yml \
+  --cfg experiments/cfgs/faster_rcnn_end2end_10x_anchor.yml \
   ${EXTRA_ARGS}
 
 set +x
@@ -46,5 +46,5 @@ time ./tools/test_net.py --gpu ${GPU_ID} \
   --def models/${PT_DIR}/${NET}/faster_rcnn_end2end/test.prototxt \
   --net ${NET_FINAL} \
   --imdb ${TEST_IMDB} \
-  --cfg experiments/cfgs/faster_rcnn_end2end.yml \
+  --cfg experiments/cfgs/faster_rcnn_end2end_10x_anchor.yml \
   ${EXTRA_ARGS}

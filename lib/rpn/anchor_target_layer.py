@@ -24,9 +24,12 @@ class AnchorTargetLayer(caffe.Layer):
     """
 
     def setup(self, bottom, top):
+        if DEBUG:
+            import ipdb
+            ipdb.set_trace()
         layer_params = yaml.load(self.param_str_)
-        anchor_scales = layer_params.get('scales', (8, 16, 32))
-        self._anchors = generate_anchors(scales=np.array(anchor_scales))
+        anchor_scales = layer_params.get('scales', cfg.ANCHOR.SCALES)
+        self._anchors = generate_anchors(ratios=cfg.ANCHOR.RATIOS, scales=np.array(anchor_scales))
         self._num_anchors = self._anchors.shape[0]
         self._feat_stride = layer_params['feat_stride']
 

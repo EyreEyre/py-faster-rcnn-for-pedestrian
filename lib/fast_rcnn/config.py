@@ -128,10 +128,10 @@ __C.TRAIN.IGNORE_BOXES = False
 __C.TRAIN.RPN_IGNORE_OVERLAP = 0.5
 # Number of class as background and foreground
 __C.TRAIN.NUM_CLASSES = 2
+
 #
 # Testing options
 #
-
 __C.TEST = edict()
 
 # Scales to use during testing (can list multiple scales)
@@ -167,6 +167,12 @@ __C.TEST.RPN_POST_NMS_TOP_N = 300
 # Proposal height and width both need to be greater than RPN_MIN_SIZE (at orig image scale)
 __C.TEST.RPN_MIN_SIZE = 16
 
+#
+# Anchor
+#
+__C.ANCHOR = edict()
+__C.ANCHOR.RATIOS = [0.5,1,2]
+__C.ANCHOR.SCALES = (8,16,32)
 
 #
 # MISC
