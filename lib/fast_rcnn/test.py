@@ -19,7 +19,7 @@ import cPickle
 from utils.blob import im_list_to_blob
 import os
 
-DEBUG = True
+DEBUG = False
 
 
 def _get_image_blob(im):

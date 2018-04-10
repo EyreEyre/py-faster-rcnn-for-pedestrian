@@ -21,7 +21,7 @@ from caltech_utils import caltech_eval, parse_caltech_annotations
 from fast_rcnn.config import cfg
 from caltech_vbb import get_image_identifiers, get_caltech_annoations, get_default_filter
 
-IPDB = True
+IPDB = False
 
 class caltech(imdb):
     def __init__(self, image_set, year, devkit_path=None):
@@ -37,7 +37,8 @@ class caltech(imdb):
         self._data_path = os.path.join(self._devkit_path, 'data')
         #govind: Ignoring the people class. So, num_classes = 2
         self._classes = ('__background__', # always index 0
-                         'person','people','person?','person-fa') 
+                         'person')
+                         #,'people','person?','person-fa') 
         
         #self._classes = ('__background__', # always index 0
         #                 'aeroplane', 'bicycle', 'bird', 'boat',

@@ -1,4 +1,4 @@
-EXP_DIR: faster_rcnn_end2end_gt_10x_anchor
+EXP_DIR: faster_rcnn_end2end_gt_10x_anchor_E01
 TRAIN:
   HAS_RPN: True
   IMS_PER_BATCH: 1
